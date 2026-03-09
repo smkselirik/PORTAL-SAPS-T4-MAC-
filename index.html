@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Markah Peperiksaan 2026 - SMK Selirik</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-gray-800">
+
+    <header class="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-xl py-6">
+        <div class="container mx-auto px-6 text-center">
+            <h1 class="text-3xl font-extrabold uppercase tracking-widest drop-shadow-md">SMK Selirik, Kapit</h1>
+            <h2 class="text-xl mt-2 text-blue-100 font-medium">Portal Kemasukan Markah Peperiksaan Pertengahan 1 (Mac) - <span class="text-yellow-400 font-bold">Tahun 2026</span></h2>
+            <p class="text-sm mt-1 text-gray-300 font-light tracking-wide">Tingkatan 4</p>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-10 max-w-6xl">
+        
+        <div id="login-section" class="max-w-md mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden p-8 fade-in border-t-4 border-blue-600">
+            <div class="text-center mb-6">
+                <svg class="w-12 h-12 text-blue-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
+                <h3 class="text-2xl font-bold text-gray-800">Log Masuk Guru</h3>
+                <p class="text-sm text-gray-500 mt-1">Sila masukkan No Kad Pengenalan</p>
+            </div>
+            <div class="mb-6">
+                <input class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-3.5 transition duration-200" id="ic_number" type="text" placeholder="Contoh: 800101010101" autocomplete="off">
+            </div>
+            <button onclick="login()" class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3.5 text-center shadow-md transition duration-300 transform hover:-translate-y-0.5">
+                Log Masuk Sistem
+            </button>
+            <p id="login-error" class="text-red-600 text-sm mt-4 hidden text-center bg-red-50 p-3 rounded-lg border border-red-200 font-medium">Peringatan: No Kad Pengenalan tidak wujud!</p>
+        </div>
+
+        <div id="portal-section" class="hidden fade-in bg-white rounded-2xl shadow-xl p-8 mb-8 border-t-4 border-emerald-500">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-5 mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-800">Selamat Kembali, <span id="guru-nama" class="text-emerald-600"></span></h3>
+                    <p class="text-gray-500 text-sm mt-1">Sila pilih subjek & kelas untuk menapis senarai pelajar.</p>
+                </div>
+                <button onclick="logout()" class="mt-4 md:mt-0 text-red-500 hover:text-white hover:bg-red-500 font-semibold border border-red-500 px-5 py-2 rounded-lg transition duration-200">Log Keluar</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="md:col-span-3">
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">Pilih Kelas & Subjek</label>
+                    <select id="subjek-pilihan" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-3 transition duration-200 cursor-pointer">
+                        </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadStudents()" class="w-full text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-300 font-medium rounded-lg text-sm px-5 py-3 text-center shadow transition duration-200">
+                        Jana Senarai Pelajar
+                    </button>
+                </div>
+            </div>
+
+            <div id="loading-indicator" class="hidden text-center text-emerald-600 font-semibold py-8 bg-emerald-50 rounded-xl border border-emerald-100 animate-pulse">
+                <p>Mengekstrak data dari Google Sheets (Kolum C & D)...</p>
+                <p class="text-xs text-emerald-500 mt-1">Menapis mengikut kelas pilihan anda...</p>
+            </div>
+            
+            <div id="senarai-pelajar-container" class="hidden mt-6">
+                <div class="flex justify-between items-center bg-gray-50 p-4 rounded-t-xl border border-gray-200 border-b-0">
+                    <h4 class="font-bold text-gray-700">Senarai Pelajar <span id="label-kelas-aktif" class="text-emerald-600"></span></h4>
+                    <span class="text-xs font-semibold bg-blue-100 text-blue-800 py-1 px-3 rounded-full">Data dari Kolum C</span>
+                </div>
+                <div class="overflow-x-auto border border-gray-200 rounded-b-xl shadow-sm">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-800 text-white text-sm uppercase font-semibold">
+                            <tr>
+                                <th class="py-4 px-6 text-left w-16">Bil</th>
+                                <th class="py-4 px-6 text-left">Nama Pelajar</th>
+                                <th class="py-4 px-6 text-center w-32">Markah (%)</th>
+                                <th class="py-4 px-6 text-center w-28">Gred</th>
+                            </tr>
+                        </thead>
+                        <tbody id="senarai-pelajar-body" class="text-gray-700 text-sm">
+                            </tbody>
+                    </table>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button onclick="simpanMarkah()" class="text-white bg-blue-600 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-bold rounded-lg text-sm px-8 py-3.5 text-center shadow-lg transition duration-200 transform hover:scale-105">
+                        Simpan & Kemas Kini Rekod
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboard-section" class="hidden fade-in bg-white rounded-2xl shadow-xl p-8 border-t-4 border-amber-500">
+            <div class="flex items-center mb-4 border-b border-gray-100 pb-4">
+                <svg class="w-6 h-6 text-amber-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <h3 class="text-2xl font-bold text-gray-800">Dashboard Semakan Markah</h3>
+            </div>
+            <p class="text-sm text-gray-500 mb-6">Senarai pelajar dan markah yang telah dimasukkan oleh anda.</p>
+            
+            <div class="overflow-x-auto rounded-xl shadow-sm border border-gray-200">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-amber-50 text-amber-900 text-xs uppercase font-bold">
+                        <tr>
+                            <th class="py-4 px-6 text-left">Subjek & Kelas</th>
+                            <th class="py-4 px-6 text-left">Nama Pelajar</th>
+                            <th class="py-4 px-6 text-center">Markah</th>
+                            <th class="py-4 px-6 text-center">Gred</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboard-body" class="text-gray-700 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-gray-900 text-gray-400 py-6 mt-auto">
+        <div class="container mx-auto text-center text-sm font-medium">
+            &copy; Hakcipta NDJE@Selirik, Kapit 2026. Semua Hak Cipta Terpelihara.
+        </div>
+    </footer>
+
+    <script>
+        // Data Guru
+        const guruDB = [
+            { id: "850805135684", name: "NATALIE DAMIE ANAK JACOB ENGGAH", subjects: ["BAHASA INGGERIS 4ST1", "BAHASA INGGERIS 4A2", "BAHASA INGGERIS 4A4"] },
+            { id: "800530125085", name: "ARNOLD JUNIOR AUGUSTINE", subjects: ["BAHASA INGGERIS 4SN"] },
+            { id: "860129525618", name: "RUNA ANAK SANGGONG", subjects: ["BAHASA INGGERIS 4KAG", "BAHASA INGGERIS 4ST2"] },
+            { id: "981014135899", name: "GEORGE CHONG", subjects: ["BAHASA INGGERIS 4A3", "BAHASA INGGERIS 4ST3"] },
+            { id: "980627135299", name: "DARREN GILBERT ANAK KOH", subjects: ["BAHASA INGGERIS 4A1"] },
+            { id: "860805526983", name: "GRAY ANAK JOWIM@JOWIN", subjects: ["SEJARAH 4ST2", "SEJARAH 4A3", "SEJARAH 4A4"] },
+            { id: "911129136097", name: "AQKMAL HAZIM BIN MUD", subjects: ["SEJARAH 4ST3", "SEJARAH 4A2"] },
+            { id: "871226525496", name: "KAREN MAWAS ANAK ARAH", subjects: ["SEJARAH 4ST1", "SEJARAH 4KAG", "SEJARAH 4A1"] },
+            { id: "900620137707", name: "YONG KASI SIONG", subjects: ["SEJARAH 4SN"] },
+            { id: "800718135867", name: "KONG CHUNG SHING", subjects: ["SAINS 4ST3", "SAINS 4A4"] },
+            { id: "861122135080", name: "ALEXANRA ANAK ANDREW KANA", subjects: ["MATEMATIK TAMBAHAN 4SN"] },
+            { id: "920312135206", name: "ANDREA AK RIWIK", subjects: ["SAINS KOMPUTER 4SN"] },
+            { id: "961130135644", name: "ATHIASIA ANAK ENJANG", subjects: ["BAHASA MELAYU 4A1", "BAHASA MELAYU 4A2"] }
+        ];
+
+        // URL Google Sheets
+        const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR3Falcr8e3WDQIi62dBDSAEUb7R9_RbYSruXj35XzL_g4ZY689hc6aFrownedisouUhYbHC78p4bW6/pub?gid=1615224868&single=true&output=csv";
+        
+        let currentGuru = null;
+
+        function login() {
+            const inputId = document.getElementById('ic_number').value.trim();
+            const errorMsg = document.getElementById('login-error');
+            
+            const guru = guruDB.find(g => g.id === inputId);
+            if (guru) {
+                currentGuru = guru;
+                errorMsg.classList.add('hidden');
+                document.getElementById('login-section').classList.add('hidden');
+                
+                document.getElementById('portal-section').classList.remove('hidden');
+                document.getElementById('dashboard-section').classList.remove('hidden');
+                document.getElementById('guru-nama').innerText = guru.name;
+
+                const sel = document.getElementById('subjek-pilihan');
+                sel.innerHTML = '<option value="">-- Sila Pilih Kelas & Subjek --</option>';
+                guru.subjects.forEach(sub => {
+                    sel.innerHTML += `<option value="${sub}">${sub}</option>`;
+                });
+                
+                kemaskiniDashboard();
+            } else {
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            if(!confirm("Anda pasti untuk log keluar?")) return;
+            currentGuru = null;
+            document.getElementById('ic_number').value = '';
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('portal-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.add('hidden');
+            document.getElementById('senarai-pelajar-container').classList.add('hidden');
+        }
+
+        function loadStudents() {
+            const subjekPilihan = document.getElementById('subjek-pilihan').value;
+            if (!subjekPilihan) {
+                alert("Peringatan: Sila pilih kelas dan subjek terlebih dahulu.");
+                return;
+            }
+
+            // Ekstrak nama kelas dari pilihan (contoh: "BAHASA INGGERIS 4ST1" -> "4ST1")
+            const parts = subjekPilihan.trim().split(' ');
+            const targetClass = parts[parts.length - 1].toUpperCase();
+            document.getElementById('label-kelas-aktif').innerText = `(${targetClass})`;
+
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            document.getElementById('senarai-pelajar-container').classList.add('hidden');
+
+            // Tetapan PapaParse: header: false membolehkan kita membaca berdasarkan Index (Kolum A=0, B=1, C=2, D=3)
+            Papa.parse(csvURL, {
+                download: true,
+                header: false, 
+                skipEmptyLines: true,
+                complete: function(results) {
+                    document.getElementById('loading-indicator').classList.add('hidden');
+                    const rows = results.data;
+                    let pelajarDitemui = [];
+
+                    // Bermula dari index 1 mengandaikan baris 0 adalah tajuk header (Name, Class dll)
+                    for(let i = 1; i < rows.length; i++) {
+                        let row = rows[i];
+                        // Pastikan baris mempunyai data yang cukup (sekurang-kurangnya sampai Kolum D)
+                        if(row.length >= 4) {
+                            let namaPelajar = row[2] ? row[2].trim() : ""; // Kolum C (Index 2)
+                            let kelasPelajar = row[3] ? row[3].trim().toUpperCase() : ""; // Kolum D (Index 3)
+
+                            // Tapis HANYA jika Kelas di Kolum D sama dengan targetClass
+                            if(kelasPelajar === targetClass && namaPelajar !== "") {
+                                pelajarDitemui.push(namaPelajar);
+                            }
+                        }
+                    }
+
+                    if(pelajarDitemui.length === 0) {
+                        alert(`Harap maklum, tiada pelajar dijumpai untuk kelas ${targetClass} dalam lajur CSV. Menjana data simulasi untuk ujian.`);
+                        pelajarDitemui = janaPelajarSimulasi(targetClass);
+                    }
+
+                    paparJadualPelajar(pelajarDitemui, subjekPilihan);
+                },
+                error: function(err) {
+                    document.getElementById('loading-indicator').classList.add('hidden');
+                    alert("Ralat CSV. Menjana data simulasi berdasarkan kelas.");
+                    let pelajarDitemui = janaPelajarSimulasi(targetClass);
+                    paparJadualPelajar(pelajarDitemui, subjekPilihan);
+                }
+            });
+        }
+
+        function paparJadualPelajar(dataArray, subjek) {
+            const tbody = document.getElementById('senarai-pelajar-body');
+            tbody.innerHTML = '';
+            
+            const savedData = JSON.parse(localStorage.getItem('markahDB') || "{}");
+            
+            dataArray.forEach((nama, index) => {
+                const key = `${subjek}_${nama}`;
+                const markahTerdahulu = savedData[key]?.markah || '';
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-100 hover:bg-emerald-50/50 transition duration-150";
+                tr.innerHTML = `
+                    <td class="py-4 px-6 text-left whitespace-nowrap text-gray-500 font-medium">${index + 1}</td>
+                    <td class="py-4 px-6 text-left font-bold text-gray-700 pelajar-nama" data-nama="${nama}">${nama}</td>
+                    <td class="py-4 px-6 text-center">
+                        <input type="number" min="0" max="100" class="input-markah border-2 border-gray-300 rounded-lg px-3 py-2 w-24 text-center font-bold text-lg focus:ring-4 focus:ring-emerald-200 focus:border-emerald-500 outline-none transition duration-200 shadow-inner" value="${markahTerdahulu}" oninput="kiraGred(this)" placeholder="-">
+                    </td>
+                    <td class="py-4 px-6 text-center font-black text-gray-300 gred-paparan text-xl">-</td>
+                `;
+                tbody.appendChild(tr);
+                
+                if(markahTerdahulu !== '') {
+                    const inputElem = tr.querySelector('.input-markah');
+                    kiraGred(inputElem);
+                }
+            });
+
+            document.getElementById('senarai-pelajar-container').classList.remove('hidden');
+        }
+
+        function kiraGred(inputElem) {
+            const markah = parseInt(inputElem.value);
+            const tdGred = inputElem.parentElement.nextElementSibling;
+            let gred = "-";
+
+            if (isNaN(markah) || markah < 0 || markah > 100) {
+                gred = "-";
+                tdGred.className = "py-4 px-6 text-center font-black text-gray-300 gred-paparan text-xl";
+            } else {
+                if (markah >= 90) gred = "A+";
+		else if (markah >= 80) gred = "A";
+		else if (markah >= 70) gred = "B-";
+		else if (markah >= 65) gred = "B+";
+                else if (markah >= 60) gred = "B";
+                else if (markah >= 55) gred = "C+";
+		else if (markah >= 50) gred = "B";
+                else if (markah >= 45) gred = "D";
+                else if (markah >= 40) gred = "E";
+                else gred = "G";
+
+                let warna = "text-blue-600";
+                if(gred === 'A+' , 'A', 'A-') warna = "text-emerald-600";
+                if(gred === 'G') warna = "text-red-600";
+                if(gred === 'B+' || gred === 'C') warna = "text-amber-500";
+                
+                tdGred.className = `py-4 px-6 text-center font-black ${warna} gred-paparan text-xl drop-shadow-sm`;
+            }
+            tdGred.innerText = gred;
+        }
+
+        function simpanMarkah() {
+            const subjekPilihan = document.getElementById('subjek-pilihan').value;
+            const rows = document.querySelectorAll('#senarai-pelajar-body tr');
+            
+            let markahDB = JSON.parse(localStorage.getItem('markahDB') || "{}");
+            let count = 0;
+
+            rows.forEach(row => {
+                const nama = row.querySelector('.pelajar-nama').getAttribute('data-nama');
+                const markah = row.querySelector('.input-markah').value;
+                const gred = row.querySelector('.gred-paparan').innerText;
+
+                if(markah !== '') {
+                    const key = `${subjekPilihan}_${nama}`;
+                    markahDB[key] = {
+                        subjek: subjekPilihan,
+                        nama: nama,
+                        markah: markah,
+                        gred: gred,
+                        guru: currentGuru.name
+                    };
+                    count++;
+                }
+            });
+
+            if(count === 0) {
+                alert("Tiada data markah baharu untuk disimpan.");
+                return;
+            }
+
+            localStorage.setItem('markahDB', JSON.stringify(markahDB));
+            alert(`${count} rekod markah telah berjaya disimpan!`);
+            kemaskiniDashboard();
+            
+            document.getElementById('dashboard-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function kemaskiniDashboard() {
+            const tbody = document.getElementById('dashboard-body');
+            tbody.innerHTML = '';
+            
+            const markahDB = JSON.parse(localStorage.getItem('markahDB') || "{}");
+            let hasData = false;
+
+            let rekodGuruIn = [];
+            for (const key in markahDB) {
+                if(currentGuru.subjects.includes(markahDB[key].subjek)) {
+                    rekodGuruIn.push(markahDB[key]);
+                }
+            }
+
+            rekodGuruIn.forEach(rekod => {
+                hasData = true;
+                
+                let bgGred = "bg-blue-100 text-blue-800 border-blue-200";
+                if(rekod.gred === 'A') bgGred = "bg-emerald-100 text-emerald-800 border-emerald-200";
+                if(rekod.gred === 'G') bgGred = "bg-red-100 text-red-800 border-red-200";
+                if(rekod.gred === 'B' || rekod.gred === 'C') bgGred = "bg-amber-100 text-amber-800 border-amber-200";
+
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition duration-150">
+                        <td class="py-4 px-6 text-left font-bold text-gray-700">${rekod.subjek}</td>
+                        <td class="py-4 px-6 text-left font-medium text-gray-600">${rekod.nama}</td>
+                        <td class="py-4 px-6 text-center text-lg font-black text-gray-800">${rekod.markah}</td>
+                        <td class="py-4 px-6 text-center">
+                            <span class="px-4 py-1.5 rounded-full text-xs font-bold border ${bgGred} shadow-sm">${rekod.gred}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if(!hasData) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-gray-500 font-medium bg-gray-50/50">Sila masukkan dan simpan markah. Rekod anda akan dipaparkan di sini.</td></tr>`;
+            }
+        }
+
+        // Mod Simulasi sekiranya pautan CSV dihalang
+        function janaPelajarSimulasi(kelasTarget) {
+            return [
+                `AWANGKU IRFAN BIN AWANGKU ISMAIL (${kelasTarget})`,
+                `CINDY ALYSSIA ANAK CHUNDI (${kelasTarget})`,
+                `DAYANGKU SITI HAJAR BINTI AWANGKU MATALI (${kelasTarget})`,
+                `EVAN JOSHUA ANAK MATHEW (${kelasTarget})`
+            ];
+        }
+
+    </script>
+</body>
+</html>
